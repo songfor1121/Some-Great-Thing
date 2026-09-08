@@ -80,35 +80,45 @@ export function Stopwatch() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center w-full">
+    <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto space-y-16 mt-8">
       <div
-        className="text-5xl sm:text-7xl md:text-8xl font-bold font-mono tracking-tighter tabular-nums mb-12"
+        className="text-6xl sm:text-8xl md:text-9xl font-light font-mono tracking-tighter tabular-nums text-primary-accent"
         aria-live="polite"
       >
         {formatStopwatchTime(elapsedMs)}
       </div>
 
-      <div className="flex gap-4">
-        <button
-          onClick={handleStartPause}
-          className="px-8 py-3 rounded-full text-lg font-semibold text-white bg-primary-accent hover:bg-secondary-accent transition-colors focus:outline-none focus:ring-4 focus:ring-primary-accent/50 shadow-md min-w-[120px]"
-          aria-label={isRunning ? "Pause Stopwatch" : "Start Stopwatch"}
-        >
-          {isRunning ? 'Pause' : (elapsedMs > 0 ? 'Resume' : 'Start')}
-        </button>
+      <div className="flex gap-6 sm:gap-10">
+        {!isRunning ? (
+          <button
+            onClick={handleStartPause}
+            className="px-10 py-4 font-medium tracking-[0.2em] uppercase text-primary-bg bg-primary-accent hover:bg-primary-accent/90 transition-colors focus:outline-none focus:ring-1 focus:ring-primary-accent min-w-[160px]"
+            aria-label="Start Stopwatch"
+          >
+            {elapsedMs > 0 ? 'Resume' : 'Start'}
+          </button>
+        ) : (
+          <button
+            onClick={handleStartPause}
+            className="px-10 py-4 font-medium tracking-[0.2em] uppercase text-primary-bg bg-text-main hover:bg-text-main/90 transition-colors focus:outline-none focus:ring-1 focus:ring-text-main min-w-[160px]"
+            aria-label="Pause Stopwatch"
+          >
+            Pause
+          </button>
+        )}
         <button
           onClick={handleReset}
           disabled={!isRunning && elapsedMs === 0}
-          className="px-8 py-3 rounded-full text-lg font-semibold text-text-main border-2 border-primary-accent/30 hover:bg-primary-accent/10 transition-colors focus:outline-none focus:ring-4 focus:ring-primary-accent/50 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
+          className="px-10 py-4 font-medium tracking-[0.2em] uppercase text-secondary-text border border-secondary-text/30 hover:bg-secondary-text/10 transition-colors focus:outline-none focus:ring-1 focus:ring-secondary-text disabled:opacity-50 disabled:cursor-not-allowed min-w-[160px]"
           aria-label="Reset Stopwatch"
         >
           Reset
         </button>
       </div>
 
-      <div className="mt-8 text-sm text-text-main/60 flex gap-4">
-        <span><kbd className="font-mono bg-black/5 px-2 py-1 rounded">Space</kbd> Start/Pause</span>
-        <span><kbd className="font-mono bg-black/5 px-2 py-1 rounded">R</kbd> Reset</span>
+      <div className="mt-8 text-xs tracking-widest text-secondary-text/50 flex gap-6 uppercase">
+        <span><kbd className="font-mono text-primary-accent/70 mr-1">Space</kbd> Start/Pause</span>
+        <span><kbd className="font-mono text-primary-accent/70 mr-1">R</kbd> Reset</span>
       </div>
     </div>
   );

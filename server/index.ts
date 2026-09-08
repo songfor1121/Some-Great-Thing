@@ -24,40 +24,54 @@ app.post('/api/server-time', async (req, res) => {
   }
 
   try {
-    // Attempt to request the URL. Use HEAD to just get headers and save bandwidth.
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout per request
 
+    // Request logic, support redirects
     let fetchResponse = await fetch(url, {
       method: 'HEAD',
       cache: 'no-store',
+      redirect: 'follow',
       signal: controller.signal
     }).catch(async (headErr) => {
-      // If HEAD fails (e.g. 405 Method Not Allowed), try GET.
+      // Fallback to GET if HEAD completely fails (e.g., connection reset or unsupported)
+      if (headErr.name === 'AbortError') throw headErr;
+
       return fetch(url, {
         method: 'GET',
         cache: 'no-store',
+        redirect: 'follow',
         signal: controller.signal
       });
     });
+
+    // Also fallback to GET if HEAD returned 405 Method Not Allowed or 501 Not Implemented
+    if (fetchResponse.status === 405 || fetchResponse.status === 501) {
+       fetchResponse = await fetch(url, {
+         method: 'GET',
+         cache: 'no-store',
+         redirect: 'follow',
+         signal: controller.signal
+       });
+    }
 
     clearTimeout(timeoutId);
 
     const dateHeader = fetchResponse.headers.get('Date') || fetchResponse.headers.get('date');
 
     if (!dateHeader) {
-      return res.status(404).json({ error: 'The server did not return a Date header.' });
+      return res.status(404).json({ error: 'Target server did not provide an HTTP Date header.' });
     }
 
     return res.json({ dateHeader });
 
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      return res.status(504).json({ error: 'The request to the target website timed out.' });
+      return res.status(504).json({ error: 'Timeout: Unable to reach the target server within the time limit.' });
     }
 
     return res.status(502).json({
-      error: 'Failed to access the target website. It may be offline or blocking requests.',
+      error: 'Unable to reach the target server. It may be offline, blocking requests, or encountering TLS/DNS errors.',
       details: error.message
     });
   }

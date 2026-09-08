@@ -1,4 +1,4 @@
-type Tab = 'current' | 'stopwatch' | 'website';
+export type Tab = 'clock' | 'timer' | 'stopwatch';
 
 interface NavigationProps {
   activeTab: Tab;
@@ -7,39 +7,39 @@ interface NavigationProps {
 
 export function Navigation({ activeTab, setActiveTab }: NavigationProps) {
   return (
-    <nav className="flex justify-center gap-4 mb-12 p-4 flex-wrap">
+    <nav className="flex justify-center gap-6 md:gap-12 mb-12 p-4 flex-wrap text-sm md:text-base tracking-[0.2em] font-medium uppercase text-secondary-text">
       <button
-        onClick={() => setActiveTab('current')}
-        className={`px-6 py-2 rounded-full font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-accent ${
-          activeTab === 'current'
-            ? 'bg-primary-accent text-white shadow-sm'
-            : 'bg-transparent text-text-main hover:bg-black/5'
+        onClick={() => setActiveTab('clock')}
+        className={`transition-colors duration-300 focus:outline-none hover:text-text-main ${
+          activeTab === 'clock'
+            ? 'text-primary-accent border-b-2 border-primary-accent pb-1'
+            : 'border-b-2 border-transparent pb-1'
         }`}
-        aria-label="Show Current Time"
+        aria-label="Show Clock"
       >
-        Current Time
+        Clock
+      </button>
+      <button
+        onClick={() => setActiveTab('timer')}
+        className={`transition-colors duration-300 focus:outline-none hover:text-text-main ${
+          activeTab === 'timer'
+            ? 'text-primary-accent border-b-2 border-primary-accent pb-1'
+            : 'border-b-2 border-transparent pb-1'
+        }`}
+        aria-label="Show Timer"
+      >
+        Timer
       </button>
       <button
         onClick={() => setActiveTab('stopwatch')}
-        className={`px-6 py-2 rounded-full font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-accent ${
+        className={`transition-colors duration-300 focus:outline-none hover:text-text-main ${
           activeTab === 'stopwatch'
-            ? 'bg-primary-accent text-white shadow-sm'
-            : 'bg-transparent text-text-main hover:bg-black/5'
+            ? 'text-primary-accent border-b-2 border-primary-accent pb-1'
+            : 'border-b-2 border-transparent pb-1'
         }`}
         aria-label="Show Stopwatch"
       >
         Stopwatch
-      </button>
-      <button
-        onClick={() => setActiveTab('website')}
-        className={`px-6 py-2 rounded-full font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-accent ${
-          activeTab === 'website'
-            ? 'bg-primary-accent text-white shadow-sm'
-            : 'bg-transparent text-text-main hover:bg-black/5'
-        }`}
-        aria-label="Show Website Server Time"
-      >
-        Website Time
       </button>
     </nav>
   );

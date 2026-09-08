@@ -1,31 +1,34 @@
-# Web-Based Timer Application
+# Jecadove Precision Time
 
-A modern, highly accurate web-based timer application built with React, TypeScript, and Vite. The design features a minimal, polished UI with a light yellow and green color palette for a calm, simple experience.
+A premium, highly accurate web-based precision time utility built with React, TypeScript, and Vite. The design features a minimal, modern, and dark aesthetic (Deep Navy, Cream, and Muted Gold).
 
 ## Features
 
-This application includes three main sections accessible via a navigation bar:
+This application includes three main sections accessible via a top navigation bar:
 
-### 1. Current Time
-Displays a highly accurate local time down to the milliseconds, updated smoothly without drift using `requestAnimationFrame`. The date is also clearly shown.
+### 1. Clock (Local & Target Website Sync)
+Displays a highly accurate local time down to the millisecond using the system monotonic clock. It also features an **Advanced Server-Time Synchronization Algorithm**.
 
-### 2. Stopwatch
-A highly accurate elapsed-time timer featuring Start, Pause, Resume, and Reset functionality. Time is derived using `performance.now()` instead of counting interval intervals, ensuring no significant drift even if the browser momentarily halts execution.
+**Why a Proxy is Required:**
+Because browsers are strictly limited by Cross-Origin Resource Sharing (CORS) rules which prevent directly reading HTTP `Date` headers across domains, this feature is powered by an integrated Express backend proxy that bypasses CORS blockages.
+
+**How Server-Time Synchronization Works:**
+1. The frontend commands the proxy to fetch the target URL.
+2. The proxy returns the HTTP Date header.
+3. The frontend executes a burst of synchronization samples (e.g. 8 samples) and records monotonic high-resolution timestamps (`performance.now()`) immediately before (`T1`) and after (`T2`) the response.
+4. It analyzes the Round-Trip Time (RTT = `T2 - T1`) of each sample and **selects the response with the lowest RTT** to minimize uncertainty.
+5. It estimates the server offset by finding the precise midpoint of the request interval.
+6. **Important Note on Precision:** HTTP Date headers are only precise to the *second*. We cannot guarantee true millisecond precision to the server's real clock. We combine the Date reference with the RTT midpoint to provide an *Estimated Server Time*.
+7. **Periodic Resync & Drift Prevention:** Once synchronized, the estimated server time is calculated locally by drawing strictly from `performance.now()`. We *never* use `setInterval` to increment a counter, completely eliminating arbitrary drift. It also continuously resynchronizes seamlessly in the background (every ~20 seconds) to adapt to small system drifts.
+
+### 2. Timer
+A robust countdown timer supporting custom Hours, Minutes, and Seconds. Uses `performance.now()` under the hood to completely avoid `setInterval` skewing.
+
+### 3. Stopwatch
+A highly accurate elapsed-time timer featuring Start, Pause, Resume, and Reset functionality.
 **Keyboard shortcuts:**
 - `Space`: Start/Pause
 - `R`: Reset
-
-### 3. Website Server Time
-Investigates a given target website's server time based on HTTP response headers (specifically the `Date` header), inspired by Navyism.
-
-Because browsers are strictly limited by Cross-Origin Resource Sharing (CORS) rules which prevent directly reading `Date` headers across domains, this feature is powered by an integrated Express backend proxy.
-
-The process:
-1. The frontend asks the backend proxy to check the target URL.
-2. The proxy makes the request, reads the HTTP Date header, and bypasses CORS.
-3. The frontend makes multiple samples (e.g. 3) and records the round-trip network latency (RTT) for each.
-4. It selects the response with the *lowest* RTT to calculate an Estimated Server Offset based on the midpoint of the request.
-5. The displayed estimated server time then updates locally in real-time using `requestAnimationFrame`, meaning it won't repeatedly hammer the target server.
 
 ## Installation
 
@@ -47,7 +50,7 @@ To run the test suite:
 ```bash
 npm run test
 ```
-The test suite ensures proper validation of the time calculations, UI logic, and backend proxy response logic.
+The test suite ensures proper validation of the synchronization calculations, UI logic, and backend proxy response logic.
 
 ## Tech Stack
 - **React 19**
