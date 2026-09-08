@@ -16,18 +16,16 @@ A highly accurate elapsed-time timer featuring Start, Pause, Resume, and Reset f
 - `R`: Reset
 
 ### 3. Website Server Time
-Investigates a given target website's server time based on HTTP response headers (specifically the `Date` header), inspired by Navyism. It estimates the server's time and the network latency by calculating the request and response time differences. The displayed estimated server time will continue to update locally in real-time.
+Investigates a given target website's server time based on HTTP response headers (specifically the `Date` header), inspired by Navyism.
 
-## Limitations of Browser-Based Server-Time Detection
+Because browsers are strictly limited by Cross-Origin Resource Sharing (CORS) rules which prevent directly reading `Date` headers across domains, this feature is powered by an integrated Express backend proxy.
 
-When checking website server time, a browser is strictly limited by Cross-Origin Resource Sharing (CORS) rules:
-
-- The `Date` header in an HTTP response cannot be read via `fetch` unless the server explicitly sets `Access-Control-Expose-Headers: Date` or if the request operates within the same origin.
-- Many websites completely block cross-origin requests, in which case the browser will immediately reject the network call resulting in a network/CORS error.
-- **Note:** The application *never* fakes the server time. If it encounters a CORS blockage, it explicitly warns the user that direct access is restricted.
-
-### Production Solution
-To reliably check the server time of *any* arbitrary website, the application could be updated to route the request through a small backend proxy server (e.g. built in Node.js/Express) which doesn't have the CORS restrictions of a browser.
+The process:
+1. The frontend asks the backend proxy to check the target URL.
+2. The proxy makes the request, reads the HTTP Date header, and bypasses CORS.
+3. The frontend makes multiple samples (e.g. 3) and records the round-trip network latency (RTT) for each.
+4. It selects the response with the *lowest* RTT to calculate an Estimated Server Offset based on the midpoint of the request.
+5. The displayed estimated server time then updates locally in real-time using `requestAnimationFrame`, meaning it won't repeatedly hammer the target server.
 
 ## Installation
 
@@ -39,20 +37,22 @@ To reliably check the server time of *any* arbitrary website, the application co
 
 ## Development
 
-To run the application locally:
+To run both the Vite frontend application and the Express backend API proxy locally at the same time, run:
 ```bash
 npm run dev
 ```
+(This executes `concurrently` to start both servers on ports 5173 and 3001).
 
 To run the test suite:
 ```bash
 npm run test
 ```
-The test suite ensures proper validation of the time calculations and URL validation logic.
+The test suite ensures proper validation of the time calculations, UI logic, and backend proxy response logic.
 
 ## Tech Stack
 - **React 19**
 - **TypeScript**
 - **Vite**
 - **Tailwind CSS v4**
+- **Express / Node.js** (for Server-Time Proxy)
 - **Vitest** for testing

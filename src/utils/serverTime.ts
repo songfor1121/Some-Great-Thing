@@ -4,7 +4,6 @@ export interface ServerTimeResult {
   estimatedDifferenceMs: number | null;
   networkLatencyMs: number | null;
   error?: string;
-  isCorsError?: boolean;
 }
 
 export function isValidUrl(urlStr: string): boolean {
@@ -27,62 +26,71 @@ export async function fetchServerTime(url: string): Promise<ServerTimeResult> {
     };
   }
 
-  const startMark = performance.now();
-  const startLocalTime = Date.now();
+  const SAMPLES = 3;
+  let bestResult: ServerTimeResult | null = null;
 
-  try {
-    // Try HEAD request first, if not allowed, some servers might need GET, but HEAD is lighter.
-    const response = await fetch(url, {
-      method: 'HEAD',
-      // No mode: 'no-cors' here because we NEED to read headers, which no-cors prevents (opaque response).
-      // We rely on the server having CORS enabled or we catch the error.
-      cache: 'no-cache',
-    });
+  // Make multiple requests and prefer the lowest RTT
+  for (let i = 0; i < SAMPLES; i++) {
+    const startMark = performance.now();
+    const startLocalTime = Date.now();
 
-    const endMark = performance.now();
+    try {
+      const response = await fetch('http://localhost:3001/api/server-time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
 
-    const latency = endMark - startMark;
-    const midpointLocalTime = startLocalTime + (latency / 2);
+      const endMark = performance.now();
+      const latency = endMark - startMark;
+      const midpointLocalTime = startLocalTime + (latency / 2);
 
-    const dateHeader = response.headers.get('Date');
+      const data = await response.json();
 
-    if (!dateHeader) {
+      if (!response.ok) {
+        // Return immediately if it's an API error (not a latency selection issue)
+        return {
+          serverTime: null,
+          localTime: new Date(midpointLocalTime),
+          estimatedDifferenceMs: null,
+          networkLatencyMs: latency,
+          error: data.error || 'Failed to fetch server time.',
+        };
+      }
+
+      const dateHeader = data.dateHeader;
+      const serverDate = new Date(dateHeader);
+      const serverTimeMs = serverDate.getTime();
+      const estimatedDifferenceMs = serverTimeMs - midpointLocalTime;
+
+      const currentResult: ServerTimeResult = {
+        serverTime: serverDate,
+        localTime: new Date(midpointLocalTime),
+        estimatedDifferenceMs,
+        networkLatencyMs: latency,
+      };
+
+      if (!bestResult || latency < (bestResult.networkLatencyMs || Infinity)) {
+        bestResult = currentResult;
+      }
+
+    } catch (error: any) {
+      // Network error reaching our own API
       return {
         serverTime: null,
-        localTime: new Date(midpointLocalTime),
+        localTime: new Date(),
         estimatedDifferenceMs: null,
-        networkLatencyMs: latency,
-        error: 'The server did not return a Date header.',
+        networkLatencyMs: null,
+        error: 'Unable to connect to the proxy server API.',
       };
     }
-
-    const serverDate = new Date(dateHeader);
-    const serverTimeMs = serverDate.getTime();
-
-    // Calculate difference (server time - local time).
-    // Positive means server is ahead, negative means server is behind.
-    const estimatedDifferenceMs = serverTimeMs - midpointLocalTime;
-
-    return {
-      serverTime: serverDate,
-      localTime: new Date(midpointLocalTime),
-      estimatedDifferenceMs,
-      networkLatencyMs: latency,
-    };
-  } catch (error: any) {
-    // Determine if it might be a CORS error (fetch fails with TypeError when CORS blocks).
-    // Note: It could also be a network error or invalid domain.
-    const isTypeError = error instanceof TypeError;
-
-    return {
-      serverTime: null,
-      localTime: new Date(),
-      estimatedDifferenceMs: null,
-      networkLatencyMs: null,
-      error: isTypeError
-        ? 'Unable to directly access this website from the browser because of CORS restrictions or network errors.'
-        : 'An error occurred while fetching the server time.',
-      isCorsError: isTypeError
-    };
   }
+
+  return bestResult || {
+    serverTime: null,
+    localTime: new Date(),
+    estimatedDifferenceMs: null,
+    networkLatencyMs: null,
+    error: 'Failed to process server time.',
+  };
 }

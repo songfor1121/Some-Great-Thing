@@ -25,15 +25,13 @@ describe('serverTime', () => {
       let callCount = 0;
       vi.spyOn(performance, 'now').mockImplementation(() => {
         callCount++;
-        return callCount === 1 ? 100 : 200; // 100ms latency
+        // Start mark, End mark. Diff = 100ms.
+        return (callCount % 2 === 1) ? 100 : 200;
       });
 
       // Mock Date.now for predictable local time
-      let dateCallCount = 0;
       vi.spyOn(Date, 'now').mockImplementation(() => {
-        dateCallCount++;
-        // return 1000 then 1100 => latency 100
-        return dateCallCount === 1 ? 1000 : 1100;
+        return 1000;
       });
     });
 
@@ -47,42 +45,43 @@ describe('serverTime', () => {
       expect(result.serverTime).toBeNull();
     });
 
-    it('handles CORS or network errors correctly', async () => {
-      // Simulate a TypeError which happens on CORS blocks or network failures
+    it('handles proxy server network errors correctly', async () => {
+      // Simulate network error connecting to our local API proxy
       (globalThis.fetch as any).mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
       const result = await fetchServerTime('https://example.com');
 
-      expect(result.error).toContain('CORS restrictions or network errors');
-      expect(result.isCorsError).toBe(true);
+      expect(result.error).toContain('Unable to connect to the proxy server API');
       expect(result.serverTime).toBeNull();
     });
 
-    it('calculates server time difference correctly', async () => {
-      // Midpoint local time will be 1000 + (100 / 2) = 1050
-      // Let's say server returns a date that evaluates to 1200ms (note: toUTCString only gives seconds precision, so we use 2000 to be safe and test difference)
-      // So estimated difference should be 2000 - 1050 = 950
+    it('calculates server time difference correctly over multiple samples', async () => {
+      // It makes SAMPLES (3) requests. We will return successful responses for all 3.
+      // We use 2000 as our server time. Midpoint is 1050 (1000 start + 100 latency / 2).
+      // Difference = 2000 - 1050 = 950.
 
-      const mockHeaders = new Headers();
-      // "Thu, 01 Jan 1970 00:00:02 GMT" is 2000ms after epoch
-      mockHeaders.set('Date', new Date(2000).toUTCString());
+      const mockResponse = {
+        ok: true,
+        json: async () => ({ dateHeader: new Date(2000).toUTCString() })
+      };
 
-      (globalThis.fetch as any).mockResolvedValueOnce({
-        headers: mockHeaders
-      });
+      (globalThis.fetch as any)
+        .mockResolvedValueOnce(mockResponse)
+        .mockResolvedValueOnce(mockResponse)
+        .mockResolvedValueOnce(mockResponse);
 
       const result = await fetchServerTime('https://example.com');
 
       expect(result.error).toBeUndefined();
-      expect(result.networkLatencyMs).toBe(100);
-      expect(result.estimatedDifferenceMs).toBe(950); // 2000 - 1050
+      expect(result.networkLatencyMs).toBe(100); // 100 is mocked in beforeEach
+      expect(result.estimatedDifferenceMs).toBe(950);
       expect(result.serverTime?.getTime()).toBe(2000);
     });
 
-    it('returns error if server has no Date header', async () => {
-      const mockHeaders = new Headers();
+    it('returns error if local proxy server responds with an error', async () => {
       (globalThis.fetch as any).mockResolvedValueOnce({
-        headers: mockHeaders
+        ok: false,
+        json: async () => ({ error: 'The server did not return a Date header.' })
       });
 
       const result = await fetchServerTime('https://example.com');

@@ -3,7 +3,7 @@ import { fetchServerTime, type ServerTimeResult } from '../utils/serverTime';
 import { formatTimeWithMilliseconds } from '../utils/timeUtils';
 
 export function WebsiteTime() {
-  const [url, setUrl] = useState('https://example.com');
+  const [url, setUrl] = useState('https://google.com');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ServerTimeResult | null>(null);
 
@@ -82,28 +82,33 @@ export function WebsiteTime() {
           disabled={isLoading || !url.trim()}
           className="px-8 py-4 rounded-xl font-semibold text-white bg-primary-accent hover:bg-secondary-accent transition-colors focus:outline-none focus:ring-4 focus:ring-primary-accent/50 shadow-md disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
         >
-          {isLoading ? 'Checking...' : 'Check Server Time'}
+          {isLoading ? 'Syncing...' : 'Check Server Time'}
         </button>
       </form>
 
       {result && (
-        <div className="w-full bg-white/60 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-sm border border-primary-accent/10">
+        <div className="w-full bg-white/60 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-sm border border-primary-accent/10 transition-opacity animate-in fade-in">
 
-          <div className="mb-6 pb-6 border-b border-primary-accent/10">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-text-main/50 mb-1">Target Website</h3>
-            <div className="text-xl font-medium truncate" title={url}>{url}</div>
+          <div className="mb-6 pb-6 border-b border-primary-accent/10 flex justify-between items-start">
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-main/50 mb-1">Target Website</h3>
+              <div className="text-xl font-medium truncate" title={url}>{url}</div>
+            </div>
+            {!result.error && (
+              <div className="flex flex-col items-end">
+                <span className="text-xs font-semibold uppercase tracking-wider text-primary-accent mb-1">Sync Status</span>
+                <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-primary-accent/10 text-primary-accent">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary-accent animate-pulse"></span>
+                  Synced
+                </span>
+              </div>
+            )}
           </div>
 
           {result.error ? (
             <div className="text-red-700 bg-red-50 p-4 rounded-lg border border-red-100 flex flex-col gap-2">
               <p className="font-medium">Error checking server time</p>
               <p className="text-sm opacity-90">{result.error}</p>
-              {result.isCorsError && (
-                <p className="text-xs mt-2 opacity-80 italic">
-                  Note: Browser security prevents checking most websites directly. In a production environment,
-                  this application would need a proxy server to bypass CORS.
-                </p>
-              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
@@ -130,7 +135,7 @@ export function WebsiteTime() {
                 </div>
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-text-main/50 mb-1">Network Latency (RTT)</h3>
-                  <div className="text-xl font-mono">
+                  <div className="text-xl font-mono" title="Lowest RTT selected from multiple samples">
                     {result.networkLatencyMs ? `${Math.round(result.networkLatencyMs)} ms` : 'N/A'}
                   </div>
                 </div>
